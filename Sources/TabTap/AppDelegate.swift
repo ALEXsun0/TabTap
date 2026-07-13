@@ -83,11 +83,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func configureStatusItem() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         if let button = statusItem.button {
-            button.image = NSImage(
-                systemSymbolName: "rectangle.stack.badge.minus",
-                accessibilityDescription: "TabTap"
-            )
-            button.image?.isTemplate = true
+            button.image = menuBarIcon()
         }
 
         let menu = NSMenu()
@@ -148,6 +144,34 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         statusItem.menu = menu
         refreshMenuState()
+    }
+
+    private func menuBarIcon() -> NSImage {
+        let iconSize = NSSize(width: 18, height: 18)
+        let image = NSImage(size: iconSize)
+
+        for resourceName in ["MenuBarIcon", "MenuBarIcon@2x"] {
+            guard let url = Bundle.main.url(forResource: resourceName, withExtension: "png"),
+                  let sourceImage = NSImage(contentsOf: url),
+                  let representation = sourceImage.representations.first else {
+                continue
+            }
+            representation.size = iconSize
+            image.addRepresentation(representation)
+        }
+
+        if image.representations.isEmpty,
+           let fallback = NSImage(
+               systemSymbolName: "rectangle.stack.badge.minus",
+               accessibilityDescription: "TabTap"
+           ) {
+            fallback.isTemplate = true
+            return fallback
+        }
+
+        image.isTemplate = true
+        image.accessibilityDescription = "TabTap"
+        return image
     }
 
     private func configurePermissionWindow() {

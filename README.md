@@ -53,7 +53,7 @@ TARGET_ARCH=arm64 ./script/build_and_run.sh --build-only
 ./script/package_dmg.sh
 ```
 
-安装镜像生成在 `dist/TabTap-0.1.5-macOS-arm64.dmg`，其中包含 TabTap 和
+安装镜像生成在 `dist/TabTap-<版本>-macOS-arm64.dmg`，其中包含 TabTap 和
 “应用程序”文件夹的快捷方式。
 
 默认构建使用 ad-hoc 签名，适合本机安装和测试。用于互联网分发时，需要在
