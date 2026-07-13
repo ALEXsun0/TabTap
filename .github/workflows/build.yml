@@ -1,0 +1,42 @@
+name: Build macOS DMG
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Test and package Apple Silicon DMG
+    runs-on: macos-14
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Run tests
+        run: swift test
+
+      - name: Build arm64 DMG
+        env:
+          TARGET_ARCH: arm64
+        run: ./script/package_dmg.sh
+
+      - name: Write checksum
+        run: shasum -a 256 dist/TabTap-*-macOS-arm64.dmg > dist/SHA256SUMS.txt
+
+      - name: Upload test build
+        uses: actions/upload-artifact@v4
+        with:
+          name: TabTap-macOS-arm64
+          path: |
+            dist/TabTap-*-macOS-arm64.dmg
+            dist/SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 14
