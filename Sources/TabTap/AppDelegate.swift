@@ -60,11 +60,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             showPermissionWindow()
         }
 
-        permissionTimer = Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { [weak self] _ in
-            Task { @MainActor in
-                self?.refreshMonitoring()
-            }
-        }
+        permissionTimer = Timer.scheduledTimer(
+            timeInterval: 2,
+            target: self,
+            selector: #selector(permissionTimerDidFire(_:)),
+            userInfo: nil,
+            repeats: true
+        )
         RunLoop.main.add(permissionTimer!, forMode: .common)
     }
 
@@ -246,6 +248,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func toggleEnabled(_ sender: NSMenuItem) {
         isEnabled.toggle()
+        refreshMonitoring()
+    }
+
+    @objc private func permissionTimerDidFire(_ timer: Timer) {
         refreshMonitoring()
     }
 
