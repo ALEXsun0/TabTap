@@ -29,7 +29,7 @@ jobs:
         run: ./script/package_dmg.sh
 
       - name: Write checksum
-        run: shasum -a 256 dist/TabTap-*-macOS-arm64.dmg > dist/SHA256SUMS.txt
+        run: cd dist && shasum -a 256 TabTap-*-macOS-arm64.dmg > SHA256SUMS.txt
 
       - name: Upload test build
         uses: actions/upload-artifact@v4
