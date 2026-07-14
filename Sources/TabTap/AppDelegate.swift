@@ -2,12 +2,15 @@ import AppKit
 import ApplicationServices
 import OSLog
 import ServiceManagement
+import TabTapCore
 
 @MainActor
-final class AppDelegate: NSObject, NSApplicationDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private enum DefaultsKey {
         static let enabled = "enabled"
     }
+
+    private static let permissionPollingInterval: TimeInterval = 2
 
     private let defaults = UserDefaults.standard
     private let logger = Logger(subsystem: "app.tabtap.TabTap", category: "permissions")
@@ -49,7 +52,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             isEnabled: { [weak self] in self?.isEnabled ?? false },
             stateChanged: { [weak self] in
                 DispatchQueue.main.async {
-                    self?.refreshMenuState()
+                    self?.eventTapStateDidChange()
                 }
             }
         )
@@ -59,19 +62,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if eventTapController.isRunning == false {
             showPermissionWindow()
         }
-
-        permissionTimer = Timer.scheduledTimer(
-            timeInterval: 2,
-            target: self,
-            selector: #selector(permissionTimerDidFire(_:)),
-            userInfo: nil,
-            repeats: true
-        )
-        RunLoop.main.add(permissionTimer!, forMode: .common)
     }
 
     func applicationWillTerminate(_ notification: Notification) {
-        permissionTimer?.invalidate()
+        stopPermissionPolling()
         eventTapController?.stop()
         ProcessInfo.processInfo.enableAutomaticTermination(automaticTerminationReason)
     }
@@ -143,7 +137,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(quitItem)
 
         statusItem.menu = menu
+        menu.delegate = self
         refreshMenuState()
+    }
+
+    func menuWillOpen(_ menu: NSMenu) {
+        refreshMonitoring()
     }
 
     private func menuBarIcon() -> NSImage {
@@ -229,6 +228,53 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         refreshPermissionModel()
         refreshMenuState()
+        updatePermissionPolling()
+    }
+
+    private func eventTapStateDidChange() {
+        refreshPermissionModel()
+        refreshMenuState()
+        updatePermissionPolling()
+    }
+
+    private func updatePermissionPolling() {
+        let shouldPoll = PermissionPollingPolicy.shouldPoll(
+            isEnabled: isEnabled,
+            monitoringRunning: eventTapController?.isRunning == true
+        )
+
+        if shouldPoll {
+            startPermissionPolling()
+        } else {
+            stopPermissionPolling()
+        }
+    }
+
+    private func startPermissionPolling() {
+        guard permissionTimer == nil else {
+            return
+        }
+
+        let timer = Timer(
+            timeInterval: Self.permissionPollingInterval,
+            target: self,
+            selector: #selector(permissionTimerDidFire(_:)),
+            userInfo: nil,
+            repeats: true
+        )
+        permissionTimer = timer
+        RunLoop.main.add(timer, forMode: .common)
+        logger.debug("Permission polling started")
+    }
+
+    private func stopPermissionPolling() {
+        guard let permissionTimer else {
+            return
+        }
+
+        permissionTimer.invalidate()
+        self.permissionTimer = nil
+        logger.debug("Permission polling stopped")
     }
 
     private func refreshPermissionModel() {
