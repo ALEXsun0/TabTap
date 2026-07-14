@@ -1,5 +1,9 @@
 # TabTap
 
+<p align="center">
+  <img src="Resources/AppIcon.png" width="160" height="160" alt="TabTap 应用图标">
+</p>
+
 TabTap 是一个轻量的 macOS 菜单栏工具。只用触控板或鼠标浏览网页时，直接
 双击 Google Chrome 原生标签页即可关闭：不需要使用键盘快捷键，也不需要把
 指针准确移到狭小的关闭按钮上。
