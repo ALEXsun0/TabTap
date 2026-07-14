@@ -1,22 +1,28 @@
 import AppKit
-import SwiftUI
 
 @MainActor
-final class PermissionWindowController: NSWindowController {
+final class PermissionWindowController: NSWindowController, NSWindowDelegate {
+    private let model: PermissionGuideModel
+    private let onClose: () -> Void
+
     init(
         model: PermissionGuideModel,
         requestAccessibility: @escaping () -> Void,
         requestInputMonitoring: @escaping () -> Void,
         recheckPermissions: @escaping () -> Void,
-        restartApplication: @escaping () -> Void
+        restartApplication: @escaping () -> Void,
+        onClose: @escaping () -> Void
     ) {
+        self.model = model
+        self.onClose = onClose
+
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 520, height: 390),
+            contentRect: NSRect(x: 0, y: 0, width: 560, height: 390),
             styleMask: [.titled, .closable, .miniaturizable],
             backing: .buffered,
             defer: false
         )
-        let rootView = PermissionGuideView(
+        let guideView = PermissionGuideView(
             model: model,
             requestAccessibility: requestAccessibility,
             requestInputMonitoring: requestInputMonitoring,
@@ -28,11 +34,15 @@ final class PermissionWindowController: NSWindowController {
         )
 
         window.title = "TabTap 权限与状态"
-        window.contentViewController = NSHostingController(rootView: rootView)
+        window.contentView = guideView
         window.isReleasedWhenClosed = false
         window.center()
 
         super.init(window: window)
+        window.delegate = self
+        model.onChange = { [weak guideView] in
+            guideView?.update()
+        }
     }
 
     @available(*, unavailable)
@@ -41,8 +51,14 @@ final class PermissionWindowController: NSWindowController {
     }
 
     func show() {
+        model.onChange?()
         showWindow(nil)
         window?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
+    }
+
+    func windowWillClose(_ notification: Notification) {
+        model.onChange = nil
+        onClose()
     }
 }

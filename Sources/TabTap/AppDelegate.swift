@@ -22,7 +22,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var launchAtLoginMenuItem: NSMenuItem!
     private var permissionTimer: Timer?
     private var eventTapController: EventTapController!
-    private var permissionWindowController: PermissionWindowController!
+    private var permissionWindowController: PermissionWindowController?
     private var lastPermissionState: PermissionState?
 
     private struct PermissionState: Equatable {
@@ -56,10 +56,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 }
             }
         )
-        configurePermissionWindow()
-
         refreshMonitoring()
-        if eventTapController.isRunning == false {
+        if eventTapController.isRunning == false,
+           !CommandLine.arguments.contains("--no-permission-prompt") {
             showPermissionWindow()
         }
     }
@@ -187,6 +186,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             },
             restartApplication: { [weak self] in
                 self?.restartApplication()
+            },
+            onClose: { [weak self] in
+                DispatchQueue.main.async {
+                    self?.permissionWindowController = nil
+                }
             }
         )
     }
@@ -283,9 +287,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             inputMonitoringGranted: CGPreflightListenEventAccess(),
             monitoringRunning: eventTapController?.isRunning == true
         )
-        permissionModel.accessibilityGranted = state.accessibilityGranted
-        permissionModel.inputMonitoringGranted = state.inputMonitoringGranted
-        permissionModel.monitoringRunning = state.monitoringRunning
+        permissionModel.update(
+            accessibilityGranted: state.accessibilityGranted,
+            inputMonitoringGranted: state.inputMonitoringGranted,
+            monitoringRunning: state.monitoringRunning
+        )
 
         if state != lastPermissionState {
             logger.info(
@@ -348,7 +354,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     @objc private func showPermissionWindow() {
         refreshMonitoring()
-        permissionWindowController.show()
+        if permissionWindowController == nil {
+            configurePermissionWindow()
+        }
+        permissionWindowController?.show()
     }
 
     private func restartApplication() {
